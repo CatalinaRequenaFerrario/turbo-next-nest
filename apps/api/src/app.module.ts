@@ -8,7 +8,15 @@ import { Transaction } from './entities/transaction.entity';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: (env) => {
+        for (const key of ['DATABASE_URL', 'JWT_SECRET']) {
+          if (!env[key]) throw new Error(`Falta la variable de entorno ${key}`);
+        }
+        return env;
+      },
+    }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
