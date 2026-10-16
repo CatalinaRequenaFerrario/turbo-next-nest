@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Transaction } from '../entities/transaction.entity';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import type { Summary } from '@cuentas/types';
+import { summarize } from './summary';
 
 @Injectable()
 export class TransactionsService {
@@ -20,34 +21,7 @@ export class TransactionsService {
   }
 
   async getSummary(userId: string): Promise<Summary> {
-    const transactions = await this.findAll(userId);
-
-    let income = 0;
-    let expense = 0;
-    const byCategoryMap = new Map<string, { amount: number; type: string }>();
-
-    for (const t of transactions) {
-      if (t.type === 'income') income += t.amount;
-      else expense += t.amount;
-
-      const existing = byCategoryMap.get(t.category);
-      if (existing) {
-        existing.amount += t.amount;
-      } else {
-        byCategoryMap.set(t.category, { amount: t.amount, type: t.type });
-      }
-    }
-
-    return {
-      income,
-      expense,
-      balance: income - expense,
-      byCategory: Array.from(byCategoryMap.entries()).map(([category, v]) => ({
-        category,
-        amount: v.amount,
-        type: v.type as 'income' | 'expense',
-      })),
-    };
+    return summarize(await this.findAll(userId));
   }
 
   async create(userId: string, dto: CreateTransactionDto): Promise<Transaction> {
