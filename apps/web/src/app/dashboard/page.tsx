@@ -6,7 +6,9 @@ import { CATEGORIES } from '@cuentas/types'
 import type { Transaction, Summary, ParsedTransaction } from '@cuentas/types'
 import * as api from '@/lib/api'
 
-const today = () => new Date().toISOString().split('T')[0]
+const eur = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
+
+const today = () => new Date().toLocaleDateString('en-CA')
 
 const EMPTY_FORM = {
   type: 'expense' as 'income' | 'expense',
@@ -243,13 +245,13 @@ export default function DashboardPage() {
           <section className="bg-white rounded-2xl border p-4">
             <p className="text-sm font-semibold text-gray-700 mb-3">Por categoría</p>
             <div className="space-y-2">
-              {summary.byCategory
+              {[...summary.byCategory]
                 .sort((a, b) => b.amount - a.amount)
                 .map(c => (
-                  <div key={c.category} className="flex items-center justify-between text-sm">
+                  <div key={`${c.type}-${c.category}`} className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">{c.category}</span>
                     <span className={c.type === 'expense' ? 'text-red-500 font-medium' : 'text-green-600 font-medium'}>
-                      {c.type === 'expense' ? '−' : '+'}{c.amount.toFixed(2)} €
+                      {c.type === 'expense' ? '−' : '+'}{eur.format(c.amount)}
                     </span>
                   </div>
                 ))}
@@ -280,7 +282,7 @@ export default function DashboardPage() {
                     )}
                   </div>
                   <span className={`text-sm font-semibold shrink-0 ${t.type === 'expense' ? 'text-red-500' : 'text-green-600'}`}>
-                    {t.type === 'expense' ? '−' : '+'}{t.amount.toFixed(2)} €
+                    {t.type === 'expense' ? '−' : '+'}{eur.format(t.amount)}
                   </span>
                   <button
                     onClick={() => handleDelete(t.id)}
@@ -304,7 +306,7 @@ function SummaryCard({ label, amount, green }: { label: string; amount: number; 
     <div className="bg-white rounded-2xl border p-3 text-center">
       <p className="text-xs text-gray-400 mb-1">{label}</p>
       <p className={`text-sm font-bold ${green ? 'text-green-600' : 'text-red-500'}`}>
-        {amount.toFixed(2)} €
+        {eur.format(amount)}
       </p>
     </div>
   )
