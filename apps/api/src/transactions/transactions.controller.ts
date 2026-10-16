@@ -12,6 +12,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TransactionsService } from './transactions.service';
 import { AiService } from './ai.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { ParseTransactionDto } from './dto/parse-transaction.dto';
 import { User } from '../entities/user.entity';
 
 interface AuthRequest extends Request {
@@ -42,8 +43,8 @@ export class TransactionsController {
   }
 
   @Post('parse')
-  parse(@Body('text') text: string) {
-    return this.aiService.parse(text);
+  parse(@Body() dto: ParseTransactionDto) {
+    return this.aiService.parse(dto.text);
   }
 
   @Delete(':id')

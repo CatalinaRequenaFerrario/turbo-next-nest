@@ -1,14 +1,24 @@
-import { Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
 import { CATEGORIES } from '@cuentas/types';
 import type { ParsedTransaction } from '@cuentas/types';
+import { extractJson, normalizeParsed } from './parse-normalizer';
 
 @Injectable()
 export class AiService {
-  private client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  private client: GoogleGenAI;
+  private model: string;
+  private timeZone: string;
+
+  constructor(config: ConfigService) {
+    this.client = new GoogleGenAI({ apiKey: config.get<string>('GEMINI_API_KEY') });
+    this.model = config.get<string>('GEMINI_MODEL', 'gemini-2.5-flash');
+    this.timeZone = config.get<string>('APP_TIMEZONE', 'Europe/Madrid');
+  }
 
   async parse(text: string): Promise<ParsedTransaction> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: this.timeZone }).format(new Date());
 
     const prompt = `Eres un asistente que extrae datos de movimientos financieros.
 Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta, sin texto adicional ni bloques de código:
@@ -27,18 +37,14 @@ Reglas:
 
 Texto a parsear: ${text}`;
 
-    const response = await this.client.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: prompt,
-    });
-
-    const raw = response.text ?? '';
-
-    const json = raw
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```$/i, '')
-      .trim();
-
-    return JSON.parse(json) as ParsedTransaction;
+    try {
+      const response = await this.client.models.generateContent({
+        model: this.model,
+        contents: prompt,
+      });
+      return normalizeParsed(extractJson(response.text ?? ''), today);
+    } catch {
+      throw new BadGatewayException('No se pudo interpretar el texto');
+    }
   }
 }
